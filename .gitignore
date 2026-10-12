@@ -1,2 +1,9 @@
 # The logger's Arrow files, written as it runs.
 /log/
+
+# What Mix builds and fetches.
+/_build/
+/deps/
+/doc/
+/cover/
+erl_crash.dump

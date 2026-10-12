@@ -1,0 +1,19 @@
+# The cat litter box logger as a systemd service on bowser. It runs from the project with Mix, with
+# the Tuya keys from ~/.config/tuya.env. Copy it to /etc/systemd/system/.
+[Unit]
+Description=Cat litter box logger
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User=tallakt
+WorkingDirectory=/home/tallakt/cat_litter_box
+EnvironmentFile=/home/tallakt/.config/tuya.env
+Environment=MIX_ENV=prod LANG=C.UTF-8
+Environment=PATH=/home/tallakt/.asdf/shims:/home/tallakt/.local/bin:/usr/local/bin:/usr/bin:/bin
+ExecStart=/usr/bin/env elixir --sname cat -S mix run --no-halt
+Restart=on-failure
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
