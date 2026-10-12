@@ -21,7 +21,7 @@ defmodule CatLitterBox.MixProject do
 
   defp deps do
     [
-      {:xignal, path: "../xignal"},
+      {:xignal, git: "git@github.com:tallakt/xignal.git", branch: "main"},
       {:websockex, "~> 0.5"},
       {:req, "~> 0.5"}
     ]
