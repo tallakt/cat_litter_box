@@ -7,7 +7,9 @@ defmodule CatLitterBox.PlantTest do
     assert io == [
              {:input, "tuya.activity_notice"},
              {:input, "tuya.cat_weight"},
-             {:output, "cat weight_g"}
+             {:input, "tuya.state"},
+             {:output, "cat weight_g"},
+             {:output, "litter_box state"}
            ]
   end
 end

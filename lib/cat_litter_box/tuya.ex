@@ -1,14 +1,16 @@
 defmodule CatLitterBox.Tuya do
   @moduledoc """
-  The WebSocket that Tuya pushes the litter box's reports over. It writes the weight, in grams, and an
-  event for every message to the store's `:tuya` partition, and reads the weight now over Tuya's REST
-  API each time it connects, as a report is pushed only when the weight changes.
+  The WebSocket that Tuya pushes the litter box's reports over. It writes the weight, in grams, what
+  the box is doing (`data_identification`: "Standby", "Cleaning", "Reset_Pause" and so on), and an
+  event for every message to the store's `:tuya` partition, and reads the weight and the state now
+  over Tuya's REST API each time it connects, as a report is pushed only when one changes.
   """
 
   use WebSockex
 
   @host "wss://mqe.tuyaeu.com:8285"
   @code "cat_weight"
+  @state "data_identification"
   @device "bf4bc5a9ded01ca8c4ovdo"
 
   # The keys are read as it starts, from the environment; the password and the key that decrypts the
@@ -36,12 +38,13 @@ defmodule CatLitterBox.Tuya do
     {:ok, %{state | pong: true}}
   end
 
-  # The weight now, after each connect, and after the first since the node started, a notification
-  # that it runs: a socket that is started again does not tell it again.
+  # The weight and the state now, after each connect, and after the first since the node started, a
+  # notification that it runs: a socket that is started again does not tell it again.
   @impl WebSockex
   def handle_info(:read_weight, state) do
-    weight = current_weight(state.keys)
+    {weight, box} = current(state.keys)
     Xignal.Store.put(:tuya, :cat_weight, weight)
+    if box, do: Xignal.Store.put(:tuya, :state, box)
 
     unless :persistent_term.get({__MODULE__, :announced}, false) do
       :persistent_term.put({__MODULE__, :announced}, true)
@@ -96,6 +99,10 @@ defmodule CatLitterBox.Tuya do
       Xignal.Store.put(:tuya, :cat_weight, units * 100)
     end
 
+    for %{"code" => @state, "value" => box} when is_binary(box) <- values do
+      Xignal.Store.put(:tuya, :state, box)
+    end
+
     {:reply, {:text, JSON.encode!(%{messageId: id})}, state}
   end
 
@@ -110,11 +117,18 @@ defmodule CatLitterBox.Tuya do
 
   defp number(_units), do: nil
 
-  # The weight now, in grams, asked of the REST API.
-  defp current_weight(keys) do
+  # The weight now, in grams, and the state, asked of the REST API.
+  defp current(keys) do
     token = get("/v1.0/token?grant_type=1", "", keys)["access_token"]
     status = get("/v1.0/devices/#{@device}/status", token, keys)
-    hd(for %{"code" => @code, "value" => units} <- status, do: units * 100)
+    weight = hd(for %{"code" => @code, "value" => units} <- status, do: units * 100)
+
+    box =
+      Enum.find_value(status, fn s ->
+        s["code"] == @state and is_binary(s["value"]) and s["value"]
+      end)
+
+    {weight, box}
   end
 
   # A request signed with the secret, as Tuya's API asks. The header names keep their underscores,

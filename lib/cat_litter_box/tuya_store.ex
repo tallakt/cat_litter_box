@@ -24,6 +24,7 @@ defmodule CatLitterBox.TuyaStore do
     @impl GenServer
     def init(_opts) do
       Xignal.Store.output(:tuya, :cat_weight, default: 0, desc: "Cat weight, g")
+      Xignal.Store.output(:tuya, :state, default: "", desc: "What the litter box is doing")
       Xignal.Store.event(:tuya, :activity_notice, desc: "A Tuya message")
       Xignal.Store.start(:tuya)
       {:ok, nil}
