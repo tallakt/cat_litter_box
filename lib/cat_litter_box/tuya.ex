@@ -117,10 +117,11 @@ defmodule CatLitterBox.Tuya do
 
   defp number(_units), do: nil
 
-  # The weight now, in grams, and the state, asked of the REST API.
+  # The weight now, in grams, and the state, asked of the REST API. The device's status leaves out the
+  # points of its own, as the state; its shadow has them all.
   defp current(keys) do
     token = get("/v1.0/token?grant_type=1", "", keys)["access_token"]
-    status = get("/v1.0/devices/#{@device}/status", token, keys)
+    status = get("/v2.0/cloud/thing/#{@device}/shadow/properties", token, keys)["properties"]
     weight = hd(for %{"code" => @code, "value" => units} <- status, do: units * 100)
 
     box =
